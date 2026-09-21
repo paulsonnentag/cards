@@ -22,14 +22,12 @@ npm run build       # vite build
 
 Type `@` and the start of a place name in the notes, for example `@Paris`. A menu of places opens, answered by the Place finder card through OpenStreetMap's Nominatim. Pick one: a place document is created, the token becomes a chip, and a pin appears on the map. Click the pin or the chip to select the place; the selection lives on the whiteboard, so both react.
 
-Every board on the canvas is a pile of its views. The focused view is on top; the others peek out underneath it as tabs at the bottom:
+To look behind anything, click **Inspect** in the top-right corner and pick a node on the page. The board whose `dom` holds that node opens in a panel that slides in from the right, with a line back to the node:
 
-- Hover a tucked tab and it slides out a little. Click it to bring that view to the front. Drag it out to the right to lay it beside the item; drag it back to tuck it.
-- **DOM** is whatever the board's cards rendered into its `dom` sticker.
-- **Board** shows the cards. Click a card to flip it face down and its effect stops. Drag to move, `+ Add card` to add one, hover for `×` to remove.
-- **Table** lists every sticker the board sees: path, scope, board, card, and value, with covered stickers dimmed.
+- **Cards**, on the left: the board's cards as playing cards. Click a card to flip it face down and its effect stops. Drag to move, `+ Add card` to add one, hover for `×` to remove.
+- **Table**, on the right: every sticker the board sees. Path, scope, board, card, and value, with covered stickers dimmed.
 
-The whiteboard itself is rendered the same way, but locked for now: only the boards on the canvas can be peeked behind.
+Pick the notes to inspect the notes board, the map for the map board, or the empty canvas for the whiteboard itself. Close the panel with `×` and the page returns to normal.
 
 Things to try:
 
@@ -45,7 +43,7 @@ src/runtime/     the runtime: boards, stickers, cells, paths, hands, mount, open
   handle.ts      Handle helpers: wrap, fromDoc, field, derive, NotFound
   board.ts       BoardImpl, HandImpl, mount, createBoard
 src/cards/       the demo cards, one module each, default-exporting a Card object
-src/shell/       the pile with the three views, and the in-place switcher for child boards
+src/shell/       the inspector: pick a node, see its board's cards and table in a side panel
 src/seed.ts      creates the demo documents on first run
 src/main.tsx     wires the repo, the root board, and the shell
 ```

@@ -13,43 +13,49 @@
 }
 * { box-sizing: border-box; }
 html, body, #app { height: 100%; margin: 0; }
+#app { display: flex; }
+:root { --panel: min(980px, 68vw); }
 body { background: var(--bg); }
 button { font: inherit; color: inherit; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 .dim { color: var(--dim); }
 
-/* ---- pile: sheets tucked under the focused one ---------------------------- */
-.pile { position: absolute; inset: 0; }
-.pile-host { position: relative; flex: 1; min-height: 0; }
-.sheet { position: absolute; inset: 0; transform: translate(var(--x, 0px), var(--y, 0px)); transition: transform .18s ease; }
-.sheet.dragging { transition: none; }
-.sheet.hidden { display: none; }
-.sheet.tucked:hover:not(.dragging) { transform: translate(var(--x, 0px), calc(var(--y, 0px) + 10px)); }
-.sheet-body { position: absolute; inset: 0; overflow: hidden; background: var(--paper); border-radius: 8px; border: 1px solid var(--line); }
-.pile.locked > .sheet > .sheet-body { border-radius: 0; border: none; }
-.sheet.tucked > .sheet-body, .sheet.pulled > .sheet-body, .sheet.dragging > .sheet-body { box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px -12px rgba(0,0,0,.25); }
-.sheet.tucked > .sheet-body { background: #f8f5ee; }
-.sheet.tucked > .sheet-body > * { visibility: hidden; }        /* nothing to see under the main sheet but the tab */
-.sheet-tab { position: absolute; left: 10px; bottom: 0; height: 22px; display: flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 11px; color: var(--dim); cursor: grab; user-select: none; touch-action: none; }
-.sheet-tab:active { cursor: grabbing; }
-.sheet.main > .sheet-tab { display: none; }
-.sheet.pulled > .sheet-tab { background: rgba(255,253,248,.9); border: 1px solid var(--line); border-bottom: none; border-radius: 6px 6px 0 0; bottom: 1px; }
-.sheet-tab .glyph { font-size: 12px; }
-
-/* the DOM sheet adopts whatever element the board's `dom` sticker names */
-.dom-view { position: absolute; inset: 0; }
+/* ---- the page: a board's dom, and the inspector ---------------------------- */
+.dom-view { position: relative; flex: 1; min-width: 0; height: 100%; }
 .dom-view > * { position: absolute !important; inset: 0 !important; width: auto !important; height: auto !important; }
 .stage { overflow: auto; background: radial-gradient(var(--line) 1px, transparent 1px) 0 0 / 24px 24px; }
 .canvas { position: relative; width: 3000px; height: 2000px; }
-.item { position: absolute; display: flex; flex-direction: column; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px -12px rgba(0,0,0,.2); }
+.item { position: absolute; display: flex; flex-direction: column; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px -12px rgba(0,0,0,.2); overflow: hidden; }
 .item.selected { outline: 2px solid var(--sel); }
-.item-handle { padding: 4px 10px; font-size: 12px; color: var(--dim); background: var(--bg); border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; cursor: grab; user-select: none; }
+.item-handle { padding: 4px 10px; font-size: 12px; color: var(--dim); background: var(--bg); border-bottom: 1px solid var(--line); cursor: grab; user-select: none; }
 .item-handle:active { cursor: grabbing; }
-.item-content { overflow: auto; }
-.item > .pile-host > .pile > .sheet > .sheet-body { border-radius: 0 0 8px 8px; border-top: none; }
-.item > .pile-host > .pile > .sheet.tucked > .sheet-body, .item > .pile-host > .pile > .sheet.pulled > .sheet-body { border-radius: 8px; border-top: 1px solid var(--line); }
-.reset { position: fixed; right: 12px; bottom: 12px; z-index: 50; border: 1px solid var(--line); background: var(--paper); color: var(--dim); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; opacity: .7; }
+.item-content { position: relative; flex: 1; min-height: 0; overflow: auto; }
+.reset { position: fixed; left: 12px; bottom: 12px; z-index: 50; border: 1px solid var(--line); background: var(--paper); color: var(--dim); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; opacity: .7; }
 .reset:hover { opacity: 1; }
+
+.inspector-btn { position: fixed; top: 12px; right: 12px; z-index: 60; transition: right .25s ease; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--paper); border-radius: 6px; padding: 5px 10px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.inspector-btn:hover { background: var(--bg); }
+.inspector-btn.open { right: calc(var(--panel) + 12px); }
+.inspector-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.inspector-btn .glyph { font-size: 14px; }
+.pick-box { position: fixed; z-index: 55; pointer-events: none; outline: 2px solid var(--accent); outline-offset: 1px; background: rgba(200,69,44,.08); border-radius: 3px; }
+.pick-label { position: absolute; left: -2px; top: -22px; white-space: nowrap; background: var(--accent); color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 4px 4px 4px 0; }
+.pick-label .mono { color: rgba(255,255,255,.8); font-size: 11px; }
+.inspector-link { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 56; pointer-events: none; overflow: visible; }
+.inspector-link rect { fill: none; stroke: var(--accent); stroke-width: 2; rx: 3; }
+.inspector-link path { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.inspector-link circle { fill: var(--accent); }
+.inspector-panel { position: relative; flex: none; width: 0; height: 100%; overflow: hidden; z-index: 57; background: var(--paper); border-left: 1px solid var(--line); box-shadow: -12px 0 40px -20px rgba(0,0,0,.35); transition: width .25s ease; }
+.inspector-panel.open { width: var(--panel); }
+.inspector-inner { position: absolute; top: 0; right: 0; bottom: 0; width: var(--panel); display: flex; flex-direction: column; }
+.inspector-head { display: flex; align-items: center; gap: 10px; padding: 0 12px; height: 52px; border-bottom: 1px solid var(--line); }
+.inspector-title { font-weight: 600; }
+.inspector-close { border: none; background: none; font-size: 20px; line-height: 1; color: var(--dim); cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.inspector-close:hover { background: var(--bg); color: var(--ink); }
+.spacer { flex: 1; }
+.inspector-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; }
+.inspector-cards, .inspector-table { position: relative; min-width: 0; min-height: 0; }
+.inspector-cards { border-right: 1px solid var(--line); }
 
 /* ---- board view --------------------------------------------------------- */
 .board-view { position: absolute; inset: 0; overflow: auto; background: #2e5e3f; background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px); background-size: 16px 16px; }
