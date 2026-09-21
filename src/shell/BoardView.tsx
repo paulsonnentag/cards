@@ -1,7 +1,6 @@
 import { For, Show, createResource, createSignal, from } from "solid-js"
 import type { Board, BoardDoc, Placement } from "../runtime"
 import { cardUrls, faceOf } from "../cards"
-import { Pile } from "./Pile"
 
 const px = (n: number) => `${n}px`
 
@@ -11,7 +10,6 @@ export function BoardView(props: { board: Board }) {
   const doc = from(cell)
   const children = from(props.board.children)
   const [adding, setAdding] = createSignal(false)
-  const [pickedUp, setPickedUp] = createSignal<Board | null>(null)
 
   const add = (url: string) => {
     const id = url.replace(/^card:/, "") + "-" + Math.random().toString(36).slice(2, 6)
@@ -31,11 +29,11 @@ export function BoardView(props: { board: Board }) {
           {(id) => {
             const open = () => children()?.find((b) => b.name === id) ?? null
             return (
-              <button class="stack" classList={{ placed: !!open() }} onClick={() => open() && setPickedUp(open())} title={open() ? "Pick up" : "Not placed by any card"}>
+              <div class="stack" classList={{ placed: !!open() }} title={open() ? "Placed on the canvas; look at it there" : "Not placed by any card"}>
                 <span class="stack-cards" />
                 <span class="stack-name">{id}</span>
                 <span class="dim">{open() ? "placed" : "unplaced"}</span>
-              </button>
+              </div>
             )
           }}
         </For>
@@ -50,15 +48,6 @@ export function BoardView(props: { board: Board }) {
           </div>
         </Show>
       </div>
-      <Show when={pickedUp()}>
-        {(b) => (
-          <div class="modal" onClick={(e) => e.target === e.currentTarget && setPickedUp(null)}>
-            <div class="modal-body">
-              <Pile board={b()} onClose={() => setPickedUp(null)} />
-            </div>
-          </div>
-        )}
-      </Show>
     </div>
   )
 }

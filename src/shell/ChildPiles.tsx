@@ -1,11 +1,9 @@
-import { For, Show, from } from "solid-js"
-import { Portal } from "solid-js/web"
+import { For, createEffect, from, on, onCleanup } from "solid-js"
+import { render } from "solid-js/web"
 import type { Board } from "../runtime"
-import { BoardView } from "./BoardView"
-import { TableView } from "./TableView"
-import { VIEWS, setView, type ViewName } from "./views"
+import { Pile } from "./Pile"
 
-/** Every open child board that has a `dom` gets a switcher in place, and its own children recursively. */
+/** Every open child board that has a `dom` gets a pile where its dom was put, and its own children recursively. */
 export function ChildPiles(props: { board: Board }) {
   const children = from(props.board.children)
   return (
@@ -20,32 +18,25 @@ export function ChildPiles(props: { board: Board }) {
   )
 }
 
+/**
+ * Renders a pile into the element that holds the child's `dom`. The pile adopts the dom element
+ * into its DOM sheet, so the renderer's slot ends up holding the whole pile.
+ */
 function InPlace(props: { board: Board }) {
   const dom = from(props.board.get<HTMLElement>("dom"))
-  // A placed board starts with its DOM on top, whatever its parent shows: its own `view` sticker covers the inherited one.
-  props.board.put("view", "dom")
-  const view = from(props.board.get<ViewName>("view"))
-  const current = () => view() ?? "dom"
-  return (
-    <Show when={dom()?.parentElement}>
-      {(parent) => (
-        <Portal mount={parent()}>
-          <div class="inplace">
-            <nav class="inplace-tabs">
-              <For each={VIEWS}>
-                {(v) => (
-                  <button class="inplace-tab" classList={{ active: current() === v.name }} title={v.title} onClick={() => setView(props.board, v.name)}>
-                    {v.glyph}
-                  </button>
-                )}
-              </For>
-            </nav>
-            <Show when={current() !== "dom"}>
-              <div class="inplace-sheet">{current() === "board" ? <BoardView board={props.board} /> : <TableView board={props.board} />}</div>
-            </Show>
-          </div>
-        </Portal>
-      )}
-    </Show>
+  createEffect(
+    on(dom, (el) => {
+      const holder = el?.parentElement
+      if (!el || !holder || holder.classList.contains("dom-view")) return
+      const host = document.createElement("div")
+      host.className = "pile-host"
+      holder.appendChild(host)
+      const dispose = render(() => <Pile board={props.board} onSpread={(n) => (holder.style.zIndex = n ? "5" : "")} />, host)
+      onCleanup(() => {
+        dispose()
+        host.remove()
+      })
+    }),
   )
+  return null
 }

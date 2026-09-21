@@ -22,13 +22,14 @@ npm run build       # vite build
 
 Type `@` and the start of a place name in the notes, for example `@Paris`. A menu of places opens, answered by the Place finder card through OpenStreetMap's Nominatim. Pick one: a place document is created, the token becomes a chip, and a pin appears on the map. Click the pin or the chip to select the place; the selection lives on the whiteboard, so both react.
 
-Switch views with the tabs in the top bar, or fan them out:
+Every board on the canvas is a pile of its views. The focused view is on top; the others peek out underneath it as tabs at the bottom:
 
-- **DOM** shows the whiteboard's `dom` sticker, the canvas with the child boards.
+- Hover a tucked tab and it slides out a little. Click it to bring that view to the front. Drag it out to the right to lay it beside the item; drag it back to tuck it.
+- **DOM** is whatever the board's cards rendered into its `dom` sticker.
 - **Board** shows the cards. Click a card to flip it face down and its effect stops. Drag to move, `+ Add card` to add one, hover for `×` to remove.
 - **Table** lists every sticker the board sees: path, scope, board, card, and value, with covered stickers dimmed.
 
-Each child board on the canvas has the same three views in the corner of its item. Try the map's table: its `map` sticker sits on top of everything inherited from the whiteboard.
+The whiteboard itself is rendered the same way, but locked for now: only the boards on the canvas can be peeked behind.
 
 Things to try:
 
