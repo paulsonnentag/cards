@@ -389,14 +389,16 @@ Everything that a card `change`s into a document is kept.
 A view is a way of drawing a board. The shell has three views:
 
 - **Board view.** `board.cards`, drawn where their placements say, face up
-  or face down, and child boards as stacks. Drag to move a card, click to
-  flip it, and drop to add one. The board view edits the board document.
+  or face down, and child boards as stacks. Click a card to select it, drag
+  to move it, and flip it by its corner. The board view edits the board
+  document.
   Flipping a card toggles `faceUp` in its placement, and `open` unmounts or
   mounts the card in response. The card itself never sees the flip.
-- **Table view.** `board.stickers()`. For each sticker: its path, value,
-  scope, attribution, and whether another sticker covers it. Shared
-  stickers are grouped by document, under the name that this board reaches
-  them by.
+- **Table view.** `board.stickers()`, as one flat listing. For each
+  sticker: its path, value, scope, attribution, and whether another sticker
+  covers it. Shared stickers are listed under the name that this board
+  reaches them by. Pick a row and its value opens as a JSON document beside
+  the list.
 - **DOM view.** The contents of the board's `dom` sticker, which is whatever
   the cards rendered into it.
 

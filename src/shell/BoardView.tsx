@@ -1,6 +1,6 @@
-import { For, Show, createResource, createSignal, from } from "solid-js"
+import { For, createResource, createSignal, from } from "solid-js"
 import type { Board, BoardDoc, Placement } from "../runtime"
-import { cardUrls, faceOf } from "../cards"
+import { faceOf } from "../cards"
 
 const px = (n: number) => `${n}px`
 
@@ -9,20 +9,20 @@ export function BoardView(props: { board: Board }) {
   const cell = props.board.get<BoardDoc>("board")
   const doc = from(cell)
   const children = from(props.board.children)
-  const [adding, setAdding] = createSignal(false)
-
-  const add = (url: string) => {
-    const id = url.replace(/^card:/, "") + "-" + Math.random().toString(36).slice(2, 6)
-    cell.change((d) => {
-      d.cards[id] = { url, x: 40 + Math.random() * 200, y: 40 + Math.random() * 120, faceUp: true }
-    })
-    setAdding(false)
-  }
+  const [selected, setSelected] = createSignal<string | null>(null)
 
   return (
-    <div class="board-view">
+    <div class="board-view" onPointerDown={(e) => e.target === e.currentTarget && setSelected(null)}>
       <For each={Object.keys(doc()?.cards ?? {})}>
-        {(id) => <PlayingCard id={id} placement={() => doc()!.cards[id]} cell={cell} />}
+        {(id) => (
+          <PlayingCard
+            id={id}
+            placement={() => doc()!.cards[id]}
+            cell={cell}
+            selected={() => selected() === id}
+            select={() => setSelected(id)}
+          />
+        )}
       </For>
       <div class="stacks">
         <For each={Object.keys(doc()?.boards ?? {})}>
@@ -38,40 +38,31 @@ export function BoardView(props: { board: Board }) {
           }}
         </For>
       </div>
-      <div class="board-tools">
-        <button class="btn" onClick={() => setAdding((a) => !a)}>
-          + Add card
-        </button>
-        <Show when={adding()}>
-          <div class="menu">
-            <For each={cardUrls}>{(url) => <FaceButton url={url} onPick={() => add(url)} />}</For>
-          </div>
-        </Show>
-      </div>
     </div>
   )
 }
 
-function FaceButton(props: { url: string; onPick: () => void }) {
-  const [face] = createResource(() => props.url, faceOf)
-  return (
-    <button class="menu-item" onClick={props.onPick}>
-      <span class="icon">{face()?.icon ?? "▢"}</span>
-      <span>
-        <b>{face()?.title ?? props.url}</b>
-        <span class="dim"> {face()?.description}</span>
-      </span>
-    </button>
-  )
-}
-
-function PlayingCard(props: { id: string; placement: () => Placement; cell: { change(fn: (d: BoardDoc) => void): void } }) {
+function PlayingCard(props: {
+  id: string
+  placement: () => Placement
+  cell: { change(fn: (d: BoardDoc) => void): void }
+  selected: () => boolean
+  select: () => void
+}) {
   const [face] = createResource(() => props.placement().url, faceOf)
   const [drag, setDrag] = createSignal<{ x: number; y: number } | null>(null)
   const pos = () => drag() ?? props.placement()
 
+  const flip = () =>
+    props.cell.change((b) => {
+      b.cards[props.id].faceUp = !b.cards[props.id].faceUp
+    })
+
+  /** Click selects, drag moves. The corner flips (its own handler). */
   const down = (e: PointerEvent) => {
-    if (e.button !== 0 || (e.target as HTMLElement).closest(".card-remove")) return
+    if (e.button !== 0 || (e.target as HTMLElement).closest(".card-remove, .card-flip")) return
+    e.stopPropagation()
+    props.select()
     const target = e.currentTarget as HTMLElement
     const p = props.placement()
     const start = { x: e.clientX - p.x, y: e.clientY - p.y }
@@ -91,10 +82,6 @@ function PlayingCard(props: { id: string; placement: () => Placement; cell: { ch
           b.cards[props.id].x = Math.round(d.x)
           b.cards[props.id].y = Math.round(d.y)
         })
-      } else {
-        props.cell.change((b) => {
-          b.cards[props.id].faceUp = !b.cards[props.id].faceUp
-        })
       }
       setDrag(null)
     }
@@ -105,14 +92,14 @@ function PlayingCard(props: { id: string; placement: () => Placement; cell: { ch
   return (
     <div
       class="card"
-      classList={{ down: !props.placement().faceUp, dragging: !!drag() }}
+      classList={{ down: !props.placement().faceUp, dragging: !!drag(), selected: props.selected() }}
       style={{ left: px(pos().x), top: px(pos().y) }}
       onPointerDown={down}
-      title={props.placement().faceUp ? "Click to flip face down" : "Click to flip face up"}
     >
       <button
         class="card-remove"
         title="Remove from board"
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
           props.cell.change((b) => {
@@ -132,6 +119,15 @@ function PlayingCard(props: { id: string; placement: () => Placement; cell: { ch
       <div class="card-back">
         <span>{face()?.title ?? props.placement().url}</span>
       </div>
+      <button
+        class="card-flip"
+        title={props.placement().faceUp ? "Flip face down" : "Flip face up"}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          flip()
+        }}
+      />
     </div>
   )
 }

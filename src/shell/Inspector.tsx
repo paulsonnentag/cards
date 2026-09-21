@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal, onCleanup } from "solid-js"
+import { For, Show, createEffect, createSignal, onCleanup } from "solid-js"
 import type { Board } from "../runtime"
 import { BoardView } from "./BoardView"
 import { TableView } from "./TableView"
@@ -8,17 +8,30 @@ interface Target {
   board: Board
 }
 
+interface Link {
+  board: Board
+  r: DOMRect
+  x2: number
+  y2: number
+  d: string
+}
+
 /**
  * An inspector for whatever is on the page. Pick a DOM node; the board whose `dom` holds it
  * opens in a panel on the right, cards next to the table, with a line back to the node.
+ * Pick again to open another board beneath it: every open board keeps its own panel.
  */
 export function Inspector(props: { root: Board }) {
   const [picking, setPicking] = createSignal(false)
   const [hover, setHover] = createSignal<Target | null>(null)
-  const [target, setTarget] = createSignal<Target | null>(null)
-  const [rect, setRect] = createSignal<DOMRect | null>(null)
-  const [panelLeft, setPanelLeft] = createSignal(window.innerWidth)
+  const [targets, setTargets] = createSignal<Target[]>([])
+  const [links, setLinks] = createSignal<Link[]>([])
+  const heads = new Map<Board, HTMLElement>()
   let panel!: HTMLDivElement
+
+  const inspect = (t: Target) =>
+    setTargets((ts) => (ts.some((x) => x.board === t.board) ? ts.map((x) => (x.board === t.board ? t : x)) : [...ts, t]))
+  const drop = (board: Board) => setTargets((ts) => ts.filter((t) => t.board !== board))
 
   /** Every open board that put a `dom` of its own, with that element. */
   const boards = (): { board: Board; el: HTMLElement }[] => {
@@ -71,7 +84,7 @@ export function Inspector(props: { root: Board }) {
       if (e.target instanceof Element && ours(e.target)) return
       swallow(e)
       const h = hover()
-      if (h) setTarget(h)
+      if (h) inspect(h)
       setPicking(false)
     }
     const key = (e: KeyboardEvent) => e.key === "Escape" && setPicking(false)
@@ -89,44 +102,45 @@ export function Inspector(props: { root: Board }) {
     })
   })
 
-  // follow the inspected node while the panel is open; close if it leaves the page or its board closes
+  // follow every inspected node while its panel is open; drop it if it leaves the page or its board closes
   createEffect(() => {
-    const t = target()
-    if (!t) return setRect(null)
-    // the panel pushes the page aside; once it has, bring the node back into view
-    const scroll = setTimeout(() => {
-      t.el.scrollIntoView({ block: "nearest", inline: "nearest" })
-      // leave room between the node and the panel for the line
-      const scroller = scrollParent(t.el)
-      const over = t.el.getBoundingClientRect().right - (panel.getBoundingClientRect().left - 48)
-      if (scroller && over > 0) scroller.scrollLeft += over
-    }, 280)
-    onCleanup(() => clearTimeout(scroll))
+    const ts = targets()
+    if (ts.length === 0) return setLinks([])
     let raf = 0
     const tick = () => {
-      if (!t.el.isConnected || t.board.signal.aborted) return setTarget(null)
-      setRect(t.el.getBoundingClientRect())
-      setPanelLeft(panel.getBoundingClientRect().left)
+      const gone = ts.filter((t) => !t.el.isConnected || t.board.signal.aborted)
+      if (gone.length) {
+        setTargets((cur) => cur.filter((t) => !gone.includes(t)))
+        return
+      }
+      const x2 = panel.getBoundingClientRect().left
+      const out: Link[] = []
+      for (const t of ts) {
+        const head = heads.get(t.board)
+        if (!head) continue
+        const h = head.getBoundingClientRect()
+        const r = t.el.getBoundingClientRect()
+        const y2 = h.top + h.height / 2
+        const x1 = Math.min(r.right, x2 - 8)
+        const y1 = Math.max(r.top, Math.min(r.bottom, y2))
+        const cx = (x1 + x2) / 2
+        out.push({ board: t.board, r, x2, y2, d: `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}` })
+      }
+      setLinks(out)
       raf = requestAnimationFrame(tick)
     }
     tick()
     onCleanup(() => cancelAnimationFrame(raf))
   })
 
-  const link = () => {
-    const r = rect()
-    if (!r) return null
-    const x2 = panelLeft()
-    const y2 = 68
-    const x1 = Math.min(r.right, x2 - 8)
-    const y1 = Math.max(r.top, Math.min(r.bottom, y2))
-    const cx = (x1 + x2) / 2
-    return { r, d: `M ${x1} ${y1} C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}` }
-  }
-
   return (
     <>
-      <button class="inspector-btn" classList={{ active: picking(), open: !!target() }} onClick={() => setPicking((p) => !p)} title="Pick something on the page to inspect the board behind it">
+      <button
+        class="inspector-btn"
+        classList={{ active: picking(), open: targets().length > 0 }}
+        onClick={() => setPicking((p) => !p)}
+        title="Pick something on the page to inspect the board behind it"
+      >
         <span class="glyph">⌖</span> {picking() ? "Pick…" : "Inspect"}
       </button>
 
@@ -143,50 +157,54 @@ export function Inspector(props: { root: Board }) {
         }}
       </Show>
 
-      <Show when={link()}>
-        {(l) => (
-          <svg class="inspector-link">
-            <rect x={l().r.left} y={l().r.top} width={l().r.width} height={l().r.height} />
-            <path d={l().d} />
-            <circle cx={panelLeft()} cy={68} r={4} />
-          </svg>
-        )}
+      <Show when={links().length > 0}>
+        <svg class="inspector-link">
+          <For each={links()}>
+            {(l) => (
+              <>
+                <rect x={l.r.left} y={l.r.top} width={l.r.width} height={l.r.height} />
+                <path d={l.d} />
+                <circle cx={l.x2} cy={l.y2} r={4} />
+              </>
+            )}
+          </For>
+        </svg>
       </Show>
 
-      <div class="inspector-panel" classList={{ open: !!target() }} ref={panel}>
-        <Show when={target()}>
-          {(t) => (
-            <div class="inspector-inner">
-              <header class="inspector-head">
-                <span class="inspector-title">{t().board.name}</span>
-                <span class="dim mono">{describe(t().el)}</span>
-                <span class="spacer" />
-                <button class="inspector-close" onClick={() => setTarget(null)} title="Close">
-                  ×
-                </button>
-              </header>
-              <div class="inspector-body">
-                <section class="inspector-cards">
-                  <BoardView board={t().board} />
-                </section>
-                <section class="inspector-table">
-                  <TableView board={t().board} />
-                </section>
-              </div>
-            </div>
-          )}
-        </Show>
+      <div class="inspector-panel" classList={{ open: targets().length > 0 }} ref={panel}>
+        <div class="inspector-inner">
+          <For each={targets()}>
+            {(t) => (
+              <section class="inspector-section">
+                <header
+                  class="inspector-head"
+                  ref={(el) => {
+                    heads.set(t.board, el)
+                    onCleanup(() => heads.delete(t.board))
+                  }}
+                >
+                  <span class="inspector-title">{t.board.name}</span>
+                  <span class="dim mono">{describe(t.el)}</span>
+                  <span class="spacer" />
+                  <button class="inspector-close" onClick={() => drop(t.board)} title="Close">
+                    ×
+                  </button>
+                </header>
+                <div class="inspector-body">
+                  <section class="inspector-cards">
+                    <BoardView board={t.board} />
+                  </section>
+                  <section class="inspector-table">
+                    <TableView board={t.board} />
+                  </section>
+                </div>
+              </section>
+            )}
+          </For>
+        </div>
       </div>
     </>
   )
-}
-
-function scrollParent(el: Element): Element | null {
-  for (let e = el.parentElement; e; e = e.parentElement) {
-    const o = getComputedStyle(e).overflowX
-    if ((o === "auto" || o === "scroll") && e.scrollWidth > e.clientWidth) return e
-  }
-  return null
 }
 
 function describe(el: Element) {

@@ -22,12 +22,12 @@ npm run build       # vite build
 
 Type `@` and the start of a place name in the notes, for example `@Paris`. A menu of places opens, answered by the Place finder card through OpenStreetMap's Nominatim. Pick one: a place document is created, the token becomes a chip, and a pin appears on the map. Click the pin or the chip to select the place; the selection lives on the whiteboard, so both react.
 
-To look behind anything, click **Inspect** in the top-right corner and pick a node on the page. The board whose `dom` holds that node opens in a panel that slides in from the right, with a line back to the node:
+To look behind anything, click **Inspect** in the top-right corner and pick a node on the page. The board whose `dom` holds that node opens in a panel that slides in from the right, with a line back to the node. Pick again to open another board under it: every inspected board keeps a section of its own.
 
-- **Cards**, on the left: the board's cards as playing cards. Click a card to flip it face down and its effect stops. Drag to move, `+ Add card` to add one, hover for `×` to remove.
-- **Table**, on the right: every sticker the board sees. Path, scope, board, card, and value, with covered stickers dimmed.
+- **Cards**, on the left: the board's cards as playing cards. Click a card to select it, drag to move it, hover for `×` to remove it. The folded corner at the bottom left flips it: face down, its effect stops.
+- **Table**, on the right: every sticker the board sees, one row each, flat. A row shows the path, who put the sticker (the card, or the board it is inherited from), and a summary of the value; inherited rows are banded, covered rows struck through. Click a row and the value opens as a JSON document in the pane beside the list.
 
-Pick the notes to inspect the notes board, the map for the map board, or the empty canvas for the whiteboard itself. Close the panel with `×` and the page returns to normal.
+Pick the notes to inspect the notes board, the map for the map board, or the empty canvas for the whiteboard itself. Close a section with `×`; when the last one goes, the page returns to normal.
 
 Things to try:
 
